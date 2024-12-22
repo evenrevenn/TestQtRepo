@@ -8,6 +8,7 @@ int main(int argc, char **argv)
 
     Window *window = new Window();
     window->show();
+    window->setAttribute(Qt::WA_DeleteOnClose, true);
 
     app.exec();
 

@@ -3,6 +3,7 @@
 #include <QListWidget>
 #include <QPushButton>
 #include <QLineEdit>
+#include <QSettings>
 
 Window::Window():
 QDialog()
@@ -36,10 +37,7 @@ QDialog()
 
     connect(add_button_, &QPushButton::clicked, this,
     [this](){
-        auto item = new QListWidgetItem(line_edit_->text(), list_widget_);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(Qt::Unchecked);
-        line_edit_->setText("");
+        addNewItem(line_edit_->text());
     });
 
     connect(list_widget_, &QListWidget::itemChanged, this,
@@ -52,4 +50,50 @@ QDialog()
         auto removed_item = list_widget_->selectedItems().back();
         delete removed_item;
     });
+
+    restoreSettings();
+}
+
+Window::~Window()
+{
+    saveSettings();
+}
+
+QListWidgetItem * Window::addNewItem(const QString &text) noexcept
+{
+    auto item = new QListWidgetItem(text, list_widget_);
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(Qt::Unchecked);
+    line_edit_->setText("");
+
+    return item;
+}
+
+void Window::restoreSettings() noexcept
+{
+    QSettings settings("settings", QSettings::IniFormat);
+    const auto geometry = settings.value("geometry", QByteArray()).toByteArray();
+    if (!geometry.isEmpty()){
+        this->restoreGeometry(geometry);
+    }
+    const auto item_list = settings.value("items", QStringList()).toStringList();
+    for (const auto &str : item_list){
+        Qt::CheckState checked = str.back() == '1' ? Qt::Checked : Qt::Unchecked;
+        addNewItem(str.left(str.size() - 1))->setCheckState(checked);
+    }
+}
+
+void Window::saveSettings() const noexcept
+{
+    QSettings settings("settings", QSettings::IniFormat);
+    settings.setValue("geometry", saveGeometry());
+
+    QStringList item_list;
+
+    for (const auto item : list_widget_->findItems("*", Qt::MatchWildcard)){
+        QString str = item->text();
+        item->checkState() == Qt::Checked ? str.append('1') : str.append('0');
+        item_list.push_back(str);
+    }
+    settings.setValue("items", item_list);
 }
